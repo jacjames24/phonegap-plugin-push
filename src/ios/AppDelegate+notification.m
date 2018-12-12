@@ -144,6 +144,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             case UNAuthorizationStatusNotDetermined:
                 completionHandler(NO);
                 break;
+            case UNAuthorizationStatusProvisional:
             case UNAuthorizationStatusAuthorized:
                 completionHandler(YES);
                 break;
