@@ -31,7 +31,7 @@
 
 @protocol GGLInstanceIDDelegate;
 @protocol GCMReceiverDelegate;
-@interface PushPlugin : CDVPlugin
+@interface PushPlugin : CDVPlugin <PKPushRegistryDelegate>
 {
     NSDictionary *notificationMessage;
     BOOL    isInline;
