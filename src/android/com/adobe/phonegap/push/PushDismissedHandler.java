@@ -6,9 +6,8 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class PushDismissedHandler extends BroadcastReceiver implements PushConstants {
-    private static String LOG_TAG = "Push_DismissedHandler";
 
-    @Override
+  @Override
     public void onReceive(Context context, Intent intent) {
         Bundle extras = intent.getExtras();
         FCMService fcm = new FCMService();
@@ -16,6 +15,8 @@ public class PushDismissedHandler extends BroadcastReceiver implements PushConst
         int notID = intent.getIntExtra(NOT_ID, 0);
 
         if (action.equals(PUSH_DISMISSED)) {
+            String LOG_TAG = "Push_DismissedHandler";
+
             Log.d(LOG_TAG, "PushDismissedHandler = " + extras);
             Log.d(LOG_TAG, "not id = " + notID);
 

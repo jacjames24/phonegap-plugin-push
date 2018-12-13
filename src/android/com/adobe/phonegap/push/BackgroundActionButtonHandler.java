@@ -9,10 +9,11 @@ import android.util.Log;
 import android.support.v4.app.RemoteInput;
 
 public class BackgroundActionButtonHandler extends BroadcastReceiver implements PushConstants {
-    private static String LOG_TAG = "Push_BGActionButton";
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        String LOG_TAG = "Push_BGActionButton";
+
         Bundle extras = intent.getExtras();
         Log.d(LOG_TAG, "BackgroundActionButtonHandler = " + extras);
 
