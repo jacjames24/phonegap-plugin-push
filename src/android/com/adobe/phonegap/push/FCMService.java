@@ -29,6 +29,7 @@ import android.support.v4.app.RemoteInput;
 import android.text.Html;
 import android.text.Spanned;
 import android.util.Log;
+import android.util.SparseArray;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -52,12 +53,12 @@ import java.security.SecureRandom;
 public class FCMService extends FirebaseMessagingService implements PushConstants {
 
   private static final String LOG_TAG = "Push_FCMService";
-  private static HashMap<Integer, ArrayList<String>> messageMap = new HashMap<Integer, ArrayList<String>>();
+  private static SparseArray<ArrayList<String>> messageMap = new SparseArray<>();
 
   public void setNotification(int notId, String message) {
     ArrayList<String> messageList = messageMap.get(notId);
     if (messageList == null) {
-      messageList = new ArrayList<String>();
+      messageList = new ArrayList<>();
       messageMap.put(notId, messageList);
     }
 
