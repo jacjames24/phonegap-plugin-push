@@ -413,9 +413,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         mBuilder = new NotificationCompat.Builder(context, channelID);
       }
 
-    } else {
-      mBuilder = new NotificationCompat.Builder(context);
-    }
+    } else mBuilder = new NotificationCompat.Builder(context);
 
     mBuilder.setWhen(System.currentTimeMillis()).setContentTitle(fromHtml(extras.getString(TITLE)))
         .setTicker(fromHtml(extras.getString(TITLE))).setContentIntent(contentIntent).setDeleteIntent(deleteIntent)
