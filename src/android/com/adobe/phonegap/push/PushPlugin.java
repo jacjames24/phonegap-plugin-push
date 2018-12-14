@@ -266,9 +266,8 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
           if (!gCachedExtras.isEmpty()) {
             Log.v(LOG_TAG, "sending cached extras");
             synchronized (gCachedExtras) {
-              Iterator<Bundle> gCachedExtrasIterator = gCachedExtras.iterator();
-              while (gCachedExtrasIterator.hasNext()) {
-                sendExtras(gCachedExtrasIterator.next());
+              for (Bundle gCachedExtra : gCachedExtras) {
+                sendExtras(gCachedExtra);
               }
             }
             gCachedExtras.clear();

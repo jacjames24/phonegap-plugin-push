@@ -271,10 +271,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         }
       } else if (key.equals(("notification"))) {
         Bundle value = extras.getBundle(key);
-        Iterator<String> iterator = value.keySet().iterator();
-        while (iterator.hasNext()) {
-          String notifkey = iterator.next();
-
+        for (String notifkey : value.keySet()) {
           Log.d(LOG_TAG, "notifkey = " + notifkey);
           String newKey = normalizeKey(notifkey, messageKey, titleKey, newExtras);
           Log.d(LOG_TAG, "replace key " + notifkey + " with " + newKey);
