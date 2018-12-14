@@ -13,7 +13,7 @@ import org.json.JSONException;
 import java.io.IOException;
 
 public class PushInstanceIDListenerService extends FirebaseInstanceIdService implements PushConstants {
-    public static final String LOG_TAG = "Push_InsIdService";
+    private static final String LOG_TAG = "Push_InsIdService";
 
     @Override
     public void onTokenRefresh() {

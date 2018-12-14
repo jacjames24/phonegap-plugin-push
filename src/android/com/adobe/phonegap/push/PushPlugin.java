@@ -39,7 +39,7 @@ import me.leolin.shortcutbadger.ShortcutBadger;
 
 public class PushPlugin extends CordovaPlugin implements PushConstants {
 
-  public static final String LOG_TAG = "Push_Plugin";
+  private static final String LOG_TAG = "Push_Plugin";
 
   private static CallbackContext pushContext;
   private static CordovaWebView gWebView;
@@ -447,14 +447,6 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     }
   }
 
-  public static void sendError(String message) {
-    PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, message);
-    pluginResult.setKeepCallback(true);
-    if (pushContext != null) {
-      pushContext.sendPluginResult(pluginResult);
-    }
-  }
-
   /*
    * Sends the pushbundle extras to the client application. If the client
    * application isn't currently active and the no-cache flag is not set, it is
@@ -646,7 +638,4 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     return gWebView != null;
   }
 
-  protected static void setRegistrationID(String token) {
-    registration_id = token;
-  }
 }

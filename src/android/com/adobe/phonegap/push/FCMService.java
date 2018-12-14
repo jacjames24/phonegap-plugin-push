@@ -17,7 +17,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Paint;
 import android.graphics.Canvas;
 import android.net.Uri;
@@ -365,7 +364,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     }
   }
 
-  public void createNotification(Context context, Bundle extras) {
+  private void createNotification(Context context, Bundle extras) {
     NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     String appName = getAppName(this);
     String packageName = context.getPackageName();
@@ -497,7 +496,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      * Notification count
      */
-    setNotificationCount(context, extras, mBuilder);
+    setNotificationCount(extras, mBuilder);
 
     /*
      *  Notification ongoing
@@ -507,7 +506,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      * Notification count
      */
-    setVisibility(context, extras, mBuilder);
+    setVisibility(extras, mBuilder);
 
     /*
      * Notification add actions
@@ -608,7 +607,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     }
   }
 
-  private void setNotificationCount(Context context, Bundle extras, NotificationCompat.Builder mBuilder) {
+  private void setNotificationCount(Bundle extras, NotificationCompat.Builder mBuilder) {
     int count = extractBadgeCount(extras);
     if (count >= 0) {
       Log.d(LOG_TAG, "count =[" + count + "]");
@@ -616,7 +615,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     }
   }
 
-  private void setVisibility(Context context, Bundle extras, NotificationCompat.Builder mBuilder) {
+  private void setVisibility(Bundle extras, NotificationCompat.Builder mBuilder) {
     String visibilityStr = extras.getString(VISIBILITY);
     if (visibilityStr != null) {
       try {
@@ -790,7 +789,6 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     final int color = Color.RED;
     final Paint paint = new Paint();
     final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-    final RectF rectF = new RectF(rect);
 
     paint.setAntiAlias(true);
     canvas.drawARGB(0, 0, 0, 0);
