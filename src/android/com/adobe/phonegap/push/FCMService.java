@@ -286,7 +286,6 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
 
           newExtras.putString(newKey, valueData);
         }
-        continue;
         // In case we weren't working on the payload data node or the notification node,
         // normalize the key.
         // This allows to have "message" as the payload data key without colliding
@@ -647,7 +646,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
   private void setNotificationVibration(Bundle extras, Boolean vibrateOption, NotificationCompat.Builder mBuilder) {
     String vibrationPattern = extras.getString(VIBRATION_PATTERN);
     if (vibrationPattern != null) {
-      String[] items = vibrationPattern.replaceAll("\\[", "").replaceAll("\\]", "").split(",");
+      String[] items = vibrationPattern.replaceAll("\\[", "").replaceAll("]", "").split(",");
       long[] results = new long[items.length];
       for (int i = 0; i < items.length; i++) {
         try {
@@ -763,7 +762,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     String ledColor = extras.getString(LED_COLOR);
     if (ledColor != null) {
       // Converts parse Int Array from ledColor
-      String[] items = ledColor.replaceAll("\\[", "").replaceAll("\\]", "").split(",");
+      String[] items = ledColor.replaceAll("\\[", "").replaceAll("]", "").split(",");
       int[] results = new int[items.length];
       for (int i = 0; i < items.length; i++) {
         try {
