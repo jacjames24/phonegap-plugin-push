@@ -190,7 +190,7 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
 
             Log.v(LOG_TAG, "execute: jo=" + jo.toString());
 
-            senderID = getStringResourceByName(GCM_DEFAULT_SENDER_ID);
+            senderID = getStringResourceByName();
 
             Log.v(LOG_TAG, "execute: senderID=" + senderID);
 
@@ -631,10 +631,10 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     return null;
   }
 
-  private String getStringResourceByName(String aString) {
+  private String getStringResourceByName() {
     Activity activity = cordova.getActivity();
     String packageName = activity.getPackageName();
-    int resId = activity.getResources().getIdentifier(aString, "string", packageName);
+    int resId = activity.getResources().getIdentifier(PushConstants.GCM_DEFAULT_SENDER_ID, "string", packageName);
     return activity.getString(resId);
   }
 

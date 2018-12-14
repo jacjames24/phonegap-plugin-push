@@ -43,7 +43,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -372,7 +371,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     String packageName = context.getPackageName();
     Resources resources = context.getResources();
 
-    int notId = parseInt(NOT_ID, extras);
+    int notId = parseInt(extras);
     Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
     notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
     notificationIntent.putExtra(PUSH_BUNDLE, extras);
@@ -917,15 +916,15 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     return (String) appName;
   }
 
-  private int parseInt(String value, Bundle extras) {
+  private int parseInt(Bundle extras) {
     int retval = 0;
 
     try {
-      retval = Integer.parseInt(extras.getString(value));
+      retval = Integer.parseInt(extras.getString(PushConstants.NOT_ID));
     } catch (NumberFormatException e) {
-      Log.e(LOG_TAG, "Number format exception - Error parsing " + value + ": " + e.getMessage());
+      Log.e(LOG_TAG, "Number format exception - Error parsing " + PushConstants.NOT_ID + ": " + e.getMessage());
     } catch (Exception e) {
-      Log.e(LOG_TAG, "Number format exception - Error parsing " + value + ": " + e.getMessage());
+      Log.e(LOG_TAG, "Number format exception - Error parsing " + PushConstants.NOT_ID + ": " + e.getMessage());
     }
 
     return retval;
