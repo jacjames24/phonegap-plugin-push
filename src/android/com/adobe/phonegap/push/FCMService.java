@@ -158,7 +158,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
 
         String localeKey = localeObject.getString(LOC_KEY);
 
-        ArrayList<String> localeFormatData = new ArrayList<String>();
+        ArrayList<String> localeFormatData = new ArrayList<>();
         if (!localeObject.isNull(LOC_DATA)) {
           String localeData = localeObject.getString(LOC_DATA);
           JSONArray localeDataArray = new JSONArray(localeData);
@@ -918,8 +918,6 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
 
     try {
       retval = Integer.parseInt(extras.getString(PushConstants.NOT_ID));
-    } catch (NumberFormatException e) {
-      Log.e(LOG_TAG, "Number format exception - Error parsing " + PushConstants.NOT_ID + ": " + e.getMessage());
     } catch (Exception e) {
       Log.e(LOG_TAG, "Number format exception - Error parsing " + PushConstants.NOT_ID + ": " + e.getMessage());
     }

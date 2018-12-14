@@ -43,7 +43,7 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
 
   private static CallbackContext pushContext;
   private static CordovaWebView gWebView;
-  private static final List<Bundle> gCachedExtras = Collections.synchronizedList(new ArrayList<Bundle>());
+  private static final List<Bundle> gCachedExtras = Collections.synchronizedList(new ArrayList<>());
   private static boolean gForeground = false;
 
   private static final String registration_id = "";
@@ -171,262 +171,236 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     gWebView = this.webView;
 
     if (INITIALIZE.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          pushContext = callbackContext;
-          JSONObject jo = null;
+      cordova.getThreadPool().execute(() -> {
+        pushContext = callbackContext;
+        JSONObject jo = null;
 
-          Log.v(LOG_TAG, "execute: data=" + data.toString());
-          SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(COM_ADOBE_PHONEGAP_PUSH,
-              Context.MODE_PRIVATE);
-          String token = null;
-          String senderID = null;
+        Log.v(LOG_TAG, "execute: data=" + data.toString());
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(COM_ADOBE_PHONEGAP_PUSH,
+            Context.MODE_PRIVATE);
+        String token = null;
+        String senderID = null;
+
+        try {
+          jo = data.getJSONObject(0).getJSONObject(ANDROID);
+
+          // If no NotificationChannels exist create the default one
+          createDefaultNotificationChannelIfNeeded(jo);
+
+          Log.v(LOG_TAG, "execute: jo=" + jo.toString());
+
+          senderID = getStringResourceByName();
+
+          Log.v(LOG_TAG, "execute: senderID=" + senderID);
 
           try {
-            jo = data.getJSONObject(0).getJSONObject(ANDROID);
+            token = FirebaseInstanceId.getInstance().getToken();
+          } catch (IllegalStateException e) {
+            Log.e(LOG_TAG, "Exception raised while getting Firebase token " + e.getMessage());
+          }
 
-            // If no NotificationChannels exist create the default one
-            createDefaultNotificationChannelIfNeeded(jo);
-
-            Log.v(LOG_TAG, "execute: jo=" + jo.toString());
-
-            senderID = getStringResourceByName();
-
-            Log.v(LOG_TAG, "execute: senderID=" + senderID);
-
+          if (token == null) {
             try {
-              token = FirebaseInstanceId.getInstance().getToken();
+              token = FirebaseInstanceId.getInstance().getToken(senderID, FCM);
             } catch (IllegalStateException e) {
               Log.e(LOG_TAG, "Exception raised while getting Firebase token " + e.getMessage());
             }
+          }
 
-            if (token == null) {
-              try {
-                token = FirebaseInstanceId.getInstance().getToken(senderID, FCM);
-              } catch (IllegalStateException e) {
-                Log.e(LOG_TAG, "Exception raised while getting Firebase token " + e.getMessage());
-              }
-            }
+          if (!"".equals(token)) {
+            JSONObject json = new JSONObject().put(REGISTRATION_ID, token);
+            json.put(REGISTRATION_TYPE, FCM);
 
-            if (!"".equals(token)) {
-              JSONObject json = new JSONObject().put(REGISTRATION_ID, token);
-              json.put(REGISTRATION_TYPE, FCM);
+            Log.v(LOG_TAG, "onRegistered: " + json.toString());
 
-              Log.v(LOG_TAG, "onRegistered: " + json.toString());
+            JSONArray topics = jo.optJSONArray(TOPICS);
+            subscribeToTopics(topics, registration_id);
 
-              JSONArray topics = jo.optJSONArray(TOPICS);
-              subscribeToTopics(topics, registration_id);
+            PushPlugin.sendEvent(json);
+          } else {
+            callbackContext.error("Empty registration ID received from FCM");
+            return;
+          }
+        } catch (JSONException e) {
+          Log.e(LOG_TAG, "execute: Got JSON Exception " + e.getMessage());
+          callbackContext.error(e.getMessage());
+        } catch (IOException e) {
+          Log.e(LOG_TAG, "execute: Got IO Exception " + e.getMessage());
+          callbackContext.error(e.getMessage());
+        } catch (Resources.NotFoundException e) {
 
-              PushPlugin.sendEvent(json);
-            } else {
-              callbackContext.error("Empty registration ID received from FCM");
-              return;
-            }
+          Log.e(LOG_TAG, "execute: Got Resources NotFoundException " + e.getMessage());
+          callbackContext.error(e.getMessage());
+        }
+
+        if (jo != null) {
+          SharedPreferences.Editor editor = sharedPref.edit();
+          try {
+            editor.putString(ICON, jo.getString(ICON));
           } catch (JSONException e) {
-            Log.e(LOG_TAG, "execute: Got JSON Exception " + e.getMessage());
-            callbackContext.error(e.getMessage());
-          } catch (IOException e) {
-            Log.e(LOG_TAG, "execute: Got IO Exception " + e.getMessage());
-            callbackContext.error(e.getMessage());
-          } catch (Resources.NotFoundException e) {
-
-            Log.e(LOG_TAG, "execute: Got Resources NotFoundException " + e.getMessage());
-            callbackContext.error(e.getMessage());
+            Log.d(LOG_TAG, "no icon option");
+          }
+          try {
+            editor.putString(ICON_COLOR, jo.getString(ICON_COLOR));
+          } catch (JSONException e) {
+            Log.d(LOG_TAG, "no iconColor option");
           }
 
-          if (jo != null) {
-            SharedPreferences.Editor editor = sharedPref.edit();
-            try {
-              editor.putString(ICON, jo.getString(ICON));
-            } catch (JSONException e) {
-              Log.d(LOG_TAG, "no icon option");
-            }
-            try {
-              editor.putString(ICON_COLOR, jo.getString(ICON_COLOR));
-            } catch (JSONException e) {
-              Log.d(LOG_TAG, "no iconColor option");
-            }
-
-            boolean clearBadge = jo.optBoolean(CLEAR_BADGE, false);
-            if (clearBadge) {
-              setApplicationIconBadgeNumber(getApplicationContext(), 0);
-            }
-
-            editor.putBoolean(SOUND, jo.optBoolean(SOUND, true));
-            editor.putBoolean(VIBRATE, jo.optBoolean(VIBRATE, true));
-            editor.putBoolean(CLEAR_BADGE, clearBadge);
-            editor.putBoolean(CLEAR_NOTIFICATIONS, jo.optBoolean(CLEAR_NOTIFICATIONS, true));
-            editor.putBoolean(FORCE_SHOW, jo.optBoolean(FORCE_SHOW, false));
-            editor.putString(SENDER_ID, senderID);
-            editor.putString(MESSAGE_KEY, jo.optString(MESSAGE_KEY));
-            editor.putString(TITLE_KEY, jo.optString(TITLE_KEY));
-            editor.apply();
+          boolean clearBadge = jo.optBoolean(CLEAR_BADGE, false);
+          if (clearBadge) {
+            setApplicationIconBadgeNumber(getApplicationContext(), 0);
           }
 
-          if (!gCachedExtras.isEmpty()) {
-            Log.v(LOG_TAG, "sending cached extras");
-            synchronized (gCachedExtras) {
-              for (Bundle gCachedExtra : gCachedExtras) {
-                sendExtras(gCachedExtra);
-              }
+          editor.putBoolean(SOUND, jo.optBoolean(SOUND, true));
+          editor.putBoolean(VIBRATE, jo.optBoolean(VIBRATE, true));
+          editor.putBoolean(CLEAR_BADGE, clearBadge);
+          editor.putBoolean(CLEAR_NOTIFICATIONS, jo.optBoolean(CLEAR_NOTIFICATIONS, true));
+          editor.putBoolean(FORCE_SHOW, jo.optBoolean(FORCE_SHOW, false));
+          editor.putString(SENDER_ID, senderID);
+          editor.putString(MESSAGE_KEY, jo.optString(MESSAGE_KEY));
+          editor.putString(TITLE_KEY, jo.optString(TITLE_KEY));
+          editor.apply();
+        }
+
+        if (!gCachedExtras.isEmpty()) {
+          Log.v(LOG_TAG, "sending cached extras");
+          synchronized (gCachedExtras) {
+            for (Bundle gCachedExtra : gCachedExtras) {
+              sendExtras(gCachedExtra);
             }
-            gCachedExtras.clear();
           }
+          gCachedExtras.clear();
         }
       });
     } else if (UNREGISTER.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(COM_ADOBE_PHONEGAP_PUSH,
-                Context.MODE_PRIVATE);
-            JSONArray topics = data.optJSONArray(0);
-            if (topics != null && !"".equals(registration_id)) {
-              unsubscribeFromTopics(topics, registration_id);
-            } else {
-              FirebaseInstanceId.getInstance().deleteInstanceId();
-              Log.v(LOG_TAG, "UNREGISTER");
+      cordova.getThreadPool().execute(() -> {
+        try {
+          SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(COM_ADOBE_PHONEGAP_PUSH,
+              Context.MODE_PRIVATE);
+          JSONArray topics = data.optJSONArray(0);
+          if (topics != null && !"".equals(registration_id)) {
+            unsubscribeFromTopics(topics, registration_id);
+          } else {
+            FirebaseInstanceId.getInstance().deleteInstanceId();
+            Log.v(LOG_TAG, "UNREGISTER");
 
-              // Remove shared prefs
-              SharedPreferences.Editor editor = sharedPref.edit();
-              editor.remove(SOUND);
-              editor.remove(VIBRATE);
-              editor.remove(CLEAR_BADGE);
-              editor.remove(CLEAR_NOTIFICATIONS);
-              editor.remove(FORCE_SHOW);
-              editor.remove(SENDER_ID);
-              editor.apply();
-            }
-
-            callbackContext.success();
-          } catch (IOException e) {
-            Log.e(LOG_TAG, "execute: Got JSON Exception " + e.getMessage());
-            callbackContext.error(e.getMessage());
+            // Remove shared prefs
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.remove(SOUND);
+            editor.remove(VIBRATE);
+            editor.remove(CLEAR_BADGE);
+            editor.remove(CLEAR_NOTIFICATIONS);
+            editor.remove(FORCE_SHOW);
+            editor.remove(SENDER_ID);
+            editor.apply();
           }
+
+          callbackContext.success();
+        } catch (IOException e) {
+          Log.e(LOG_TAG, "execute: Got JSON Exception " + e.getMessage());
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (FINISH.equals(action)) {
       callbackContext.success();
     } else if (HAS_PERMISSION.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          JSONObject jo = new JSONObject();
-          try {
-            Log.d(LOG_TAG,
-                "has permission: " + NotificationManagerCompat.from(getApplicationContext()).areNotificationsEnabled());
-            jo.put("isEnabled", NotificationManagerCompat.from(getApplicationContext()).areNotificationsEnabled());
-            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jo);
-            pluginResult.setKeepCallback(true);
-            callbackContext.sendPluginResult(pluginResult);
-          } catch (UnknownError e) {
-            callbackContext.error(e.getMessage());
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        JSONObject jo = new JSONObject();
+        try {
+          Log.d(LOG_TAG,
+              "has permission: " + NotificationManagerCompat.from(getApplicationContext()).areNotificationsEnabled());
+          jo.put("isEnabled", NotificationManagerCompat.from(getApplicationContext()).areNotificationsEnabled());
+          PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jo);
+          pluginResult.setKeepCallback(true);
+          callbackContext.sendPluginResult(pluginResult);
+        } catch (UnknownError | JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (SET_APPLICATION_ICON_BADGE_NUMBER.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          Log.v(LOG_TAG, "setApplicationIconBadgeNumber: data=" + data.toString());
-          try {
-            setApplicationIconBadgeNumber(getApplicationContext(), data.getJSONObject(0).getInt(BADGE));
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
-          callbackContext.success();
+      cordova.getThreadPool().execute(() -> {
+        Log.v(LOG_TAG, "setApplicationIconBadgeNumber: data=" + data.toString());
+        try {
+          setApplicationIconBadgeNumber(getApplicationContext(), data.getJSONObject(0).getInt(BADGE));
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
+        callbackContext.success();
       });
     } else if (GET_APPLICATION_ICON_BADGE_NUMBER.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          Log.v(LOG_TAG, "getApplicationIconBadgeNumber");
-          callbackContext.success(getApplicationIconBadgeNumber(getApplicationContext()));
-        }
+      cordova.getThreadPool().execute(() -> {
+        Log.v(LOG_TAG, "getApplicationIconBadgeNumber");
+        callbackContext.success(getApplicationIconBadgeNumber(getApplicationContext()));
       });
     } else if (CLEAR_ALL_NOTIFICATIONS.equals(action)) {
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          Log.v(LOG_TAG, "clearAllNotifications");
-          clearAllNotifications();
-          callbackContext.success();
-        }
+      cordova.getThreadPool().execute(() -> {
+        Log.v(LOG_TAG, "clearAllNotifications");
+        clearAllNotifications();
+        callbackContext.success();
       });
     } else if (SUBSCRIBE.equals(action)) {
       // Subscribing for a topic
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            String topic = data.getString(0);
-            subscribeToTopic(topic);
-            callbackContext.success();
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          String topic = data.getString(0);
+          subscribeToTopic(topic);
+          callbackContext.success();
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (UNSUBSCRIBE.equals(action)) {
       // un-subscribing for a topic
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            String topic = data.getString(0);
-            unsubscribeFromTopic(topic, registration_id);
-            callbackContext.success();
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          String topic = data.getString(0);
+          unsubscribeFromTopic(topic, registration_id);
+          callbackContext.success();
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (CREATE_CHANNEL.equals(action)) {
       // un-subscribing for a topic
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            // call create channel
-            createChannel(data.getJSONObject(0));
-            callbackContext.success();
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          // call create channel
+          createChannel(data.getJSONObject(0));
+          callbackContext.success();
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (DELETE_CHANNEL.equals(action)) {
       // un-subscribing for a topic
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            String channelId = data.getString(0);
-            deleteChannel(channelId);
-            callbackContext.success();
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          String channelId = data.getString(0);
+          deleteChannel(channelId);
+          callbackContext.success();
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (LIST_CHANNELS.equals(action)) {
       // un-subscribing for a topic
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            callbackContext.success(listChannels());
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          callbackContext.success(listChannels());
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else if (CLEAR_NOTIFICATION.equals(action)) {
       // clearing a single notification
-      cordova.getThreadPool().execute(new Runnable() {
-        public void run() {
-          try {
-            Log.v(LOG_TAG, "clearNotification");
-            int id = data.getInt(0);
-            clearNotification(id);
-            callbackContext.success();
-          } catch (JSONException e) {
-            callbackContext.error(e.getMessage());
-          }
+      cordova.getThreadPool().execute(() -> {
+        try {
+          Log.v(LOG_TAG, "clearNotification");
+          int id = data.getInt(0);
+          clearNotification(id);
+          callbackContext.success();
+        } catch (JSONException e) {
+          callbackContext.error(e.getMessage());
         }
       });
     } else {
