@@ -51,7 +51,7 @@ import java.security.SecureRandom;
 public class FCMService extends FirebaseMessagingService implements PushConstants {
 
   private static final String LOG_TAG = "Push_FCMService";
-  private static SparseArray<ArrayList<String>> messageMap = new SparseArray<>();
+  private static final SparseArray<ArrayList<String>> messageMap = new SparseArray<>();
 
   public void setNotification(int notId, String message) {
     ArrayList<String> messageList = messageMap.get(notId);
@@ -640,6 +640,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         try {
           results[i] = Long.parseLong(items[i].trim());
         } catch (NumberFormatException nfe) {
+          Log.e(LOG_TAG, "Issue in parsing results");
         }
       }
       mBuilder.setVibrate(results);
@@ -753,6 +754,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         try {
           results[i] = Integer.parseInt(items[i].trim());
         } catch (NumberFormatException nfe) {
+          Log.e(LOG_TAG, "Number format exception encountered.");
         }
       }
       if (results.length == 4) {

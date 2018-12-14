@@ -43,10 +43,10 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
 
   private static CallbackContext pushContext;
   private static CordovaWebView gWebView;
-  private static List<Bundle> gCachedExtras = Collections.synchronizedList(new ArrayList<Bundle>());
+  private static final List<Bundle> gCachedExtras = Collections.synchronizedList(new ArrayList<Bundle>());
   private static boolean gForeground = false;
 
-  private static String registration_id = "";
+  private static final String registration_id = "";
 
   /**
    * Gets the application context from cordova's main activity.
@@ -359,7 +359,7 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
         public void run() {
           try {
             String topic = data.getString(0);
-            subscribeToTopic(topic, registration_id);
+            subscribeToTopic(topic);
             callbackContext.success();
           } catch (JSONException e) {
             callbackContext.error(e.getMessage());
@@ -537,12 +537,12 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
       String topic = null;
       for (int i = 0; i < topics.length(); i++) {
         topic = topics.optString(i, null);
-        subscribeToTopic(topic, registrationToken);
+        subscribeToTopic(topic);
       }
     }
   }
 
-  private void subscribeToTopic(String topic, String registrationToken) {
+  private void subscribeToTopic(String topic) {
     if (topic != null) {
       Log.d(LOG_TAG, "Subscribing to topic: " + topic);
       FirebaseMessaging.getInstance().subscribeToTopic(topic);
