@@ -86,7 +86,9 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       extras.putString(entry.getKey(), entry.getValue());
     }
 
-    if (extras != null && isAvailableSender(from)) {
+    if (from == null) { return; }
+
+    if (isAvailableSender(from)) {
       Context applicationContext = getApplicationContext();
 
       SharedPreferences prefs = applicationContext.getSharedPreferences(PushPlugin.COM_ADOBE_PHONEGAP_PUSH,
@@ -271,6 +273,9 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         }
       } else if (key.equals(("notification"))) {
         Bundle value = extras.getBundle(key);
+
+        if (value == null) { continue; }
+
         for (String notifkey : value.keySet()) {
           Log.d(LOG_TAG, "notifkey = " + notifkey);
           String newKey = normalizeKey(notifkey, messageKey, titleKey, newExtras);
@@ -327,7 +332,9 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     }
     if (badgeCount == 0) {
       NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-      mNotificationManager.cancelAll();
+      if (mNotificationManager != null) {
+        mNotificationManager.cancelAll();
+      }
     }
 
     Log.d(LOG_TAG, "message =[" + message + "]");
@@ -396,14 +403,18 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       if (channelID != null) {
         mBuilder = new NotificationCompat.Builder(context, channelID);
       } else {
-        List<NotificationChannel> channels = mNotificationManager.getNotificationChannels();
+        if (mNotificationManager != null) {
+          List<NotificationChannel> channels = mNotificationManager.getNotificationChannels();
 
-        if (channels.size() == 1) {
-          channelID = channels.get(0).getId();
+          if (channels.size() == 1) {
+            channelID = channels.get(0).getId();
+          }
+
+          Log.d(LOG_TAG, "Using channel ID = " + channelID);
+          if (channelID != null) {
+            mBuilder = new NotificationCompat.Builder(context, channelID);
+          }
         }
-
-        Log.d(LOG_TAG, "Using channel ID = " + channelID);
-        mBuilder = new NotificationCompat.Builder(context, channelID);
       }
     } else {
       if (channelID != null) {
@@ -411,9 +422,11 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       }
     }
 
-    mBuilder.setWhen(System.currentTimeMillis()).setContentTitle(fromHtml(extras.getString(TITLE)))
+    if (mBuilder != null) {
+      mBuilder.setWhen(System.currentTimeMillis()).setContentTitle(fromHtml(extras.getString(TITLE)))
         .setTicker(fromHtml(extras.getString(TITLE))).setContentIntent(contentIntent).setDeleteIntent(deleteIntent)
         .setAutoCancel(true);
+    }
 
     SharedPreferences prefs = context.getSharedPreferences(PushPlugin.COM_ADOBE_PHONEGAP_PUSH, Context.MODE_PRIVATE);
     String localIcon = prefs.getString(ICON, null);
@@ -498,19 +511,24 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      *  Notification ongoing
      */
-    setNotificationOngoing(extras, mBuilder);
+    if (mBuilder != null) {
+      setNotificationOngoing(extras, mBuilder);
+    }
 
     /*
      * Notification count
      */
-    setVisibility(extras, mBuilder);
-
+    if (mBuilder != null) {
+      setVisibility(extras, mBuilder);
+    }
     /*
      * Notification add actions
      */
     createActions(extras, mBuilder, resources, packageName, notId);
 
-    mNotificationManager.notify(appName, notId, mBuilder.build());
+    if (mNotificationManager != null && mBuilder != null) {
+      mNotificationManager.notify(appName, notId, mBuilder.build());
+    }
   }
 
   private void updateIntent(Intent intent, String callback, Bundle extras, boolean foreground, int notId) {
@@ -538,8 +556,8 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
           Log.d(LOG_TAG, "adding callback = " + action.getString(CALLBACK));
           boolean foreground = action.optBoolean(FOREGROUND, true);
           boolean inline = action.optBoolean("inline", false);
-          Intent intent = null;
-          PendingIntent pIntent = null;
+          Intent intent;
+          PendingIntent pIntent;
           if (inline) {
             Log.d(LOG_TAG, "Version: " + android.os.Build.VERSION.SDK_INT + " = " + android.os.Build.VERSION_CODES.M);
             if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.M) {
@@ -563,12 +581,12 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             }
           } else if (foreground) {
             intent = new Intent(this, PushHandlerActivity.class);
-            updateIntent(intent, action.getString(CALLBACK), extras, foreground, notId);
+            updateIntent(intent, action.getString(CALLBACK), extras, true, notId);
             pIntent = PendingIntent.getActivity(this, uniquePendingIntentRequestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
           } else {
             intent = new Intent(this, BackgroundActionButtonHandler.class);
-            updateIntent(intent, action.getString(CALLBACK), extras, foreground, notId);
+            updateIntent(intent, action.getString(CALLBACK), extras, false, notId);
             pIntent = PendingIntent.getBroadcast(this, uniquePendingIntentRequestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
           }
@@ -576,7 +594,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
           NotificationCompat.Action.Builder actionBuilder = new NotificationCompat.Action.Builder(
               getImageId(resources, action.optString(ICON, ""), packageName), action.getString(TITLE), pIntent);
 
-          RemoteInput remoteInput = null;
+          RemoteInput remoteInput;
           if (inline) {
             Log.d(LOG_TAG, "create remote input");
             String replyLabel = action.optString(INLINE_REPLY_LABEL, "Enter your reply here");
@@ -593,8 +611,6 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             mBuilder.addAction(getImageId(resources, action.optString(ICON, ""), packageName), action.getString(TITLE),
                 pIntent);
           }
-          wAction = null;
-          pIntent = null;
         }
         mBuilder.extend(new WearableExtender().addActions(wActions));
         wActions.clear();
@@ -668,7 +684,9 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         String stacking = sizeList + " more";
         if (extras.getString(SUMMARY_TEXT) != null) {
           stacking = extras.getString(SUMMARY_TEXT);
-          stacking = stacking.replace("%n%", sizeListMessage);
+          if (stacking != null) {
+            stacking = stacking.replace("%n%", sizeListMessage);
+          }
         }
         NotificationCompat.InboxStyle notificationInbox = new NotificationCompat.InboxStyle()
             .setBigContentTitle(fromHtml(extras.getString(TITLE))).setSummaryText(fromHtml(stacking));
@@ -833,7 +851,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
           }
           Log.d(LOG_TAG, "using assets large-icon from gcm");
         } catch (IOException e) {
-          int largeIconId = 0;
+          int largeIconId;
           largeIconId = getImageId(resources, gcmLargeIcon, packageName);
           if (largeIconId != 0) {
             Bitmap largeIconBitmap = BitmapFactory.decodeResource(resources, largeIconId);

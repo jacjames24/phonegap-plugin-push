@@ -24,22 +24,30 @@ public class PushHandlerActivity extends Activity implements PushConstants {
         FCMService gcm = new FCMService();
 
         Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
 
-        int notId = intent.getExtras().getInt(NOT_ID, 0);
+        if (extras == null) { return; }
+
+        int notId = extras.getInt(NOT_ID, 0);
         Log.d(LOG_TAG, "not id = " + notId);
         gcm.setNotification(notId, "");
         super.onCreate(savedInstanceState);
+
         Log.v(LOG_TAG, "onCreate");
-        String callback = getIntent().getExtras().getString("callback");
+        String callback = extras.getString("callback");
         Log.d(LOG_TAG, "callback = " + callback);
-        boolean foreground = getIntent().getExtras().getBoolean("foreground", true);
-        boolean startOnBackground = getIntent().getExtras().getBoolean(START_IN_BACKGROUND, false);
-        boolean dismissed = getIntent().getExtras().getBoolean(DISMISSED, false);
+
+        boolean foreground = extras.getBoolean("foreground", true);
+        boolean startOnBackground = extras.getBoolean(START_IN_BACKGROUND, false);
+        boolean dismissed = extras.getBoolean(DISMISSED, false);
         Log.d(LOG_TAG, "dismissed = " + dismissed);
 
         if(!startOnBackground){
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.cancel(FCMService.getAppName(this), notId);
+
+            if (notificationManager != null) {
+              notificationManager.cancel(FCMService.getAppName(this), notId);
+            }
         }
 
         boolean isPushPluginActive = PushPlugin.isActive();
@@ -53,17 +61,17 @@ public class PushHandlerActivity extends Activity implements PushConstants {
 
         finish();
 
-        if(!dismissed) {
-            Log.d(LOG_TAG, "isPushPluginActive = " + isPushPluginActive);
-            if (!isPushPluginActive && foreground && inline) {
-                Log.d(LOG_TAG, "forceMainActivityReload");
-                forceMainActivityReload(false);
-            } else if(startOnBackground) {
-                Log.d(LOG_TAG, "startOnBackgroundTrue");
-                forceMainActivityReload(true);
-            } else {
-                Log.d(LOG_TAG, "don't want main activity");
-            }
+        if (dismissed) { return; }
+
+        Log.d(LOG_TAG, "isPushPluginActive = " + isPushPluginActive);
+        if (!isPushPluginActive && foreground && inline) {
+          Log.d(LOG_TAG, "forceMainActivityReload");
+          forceMainActivityReload(false);
+        } else if(startOnBackground) {
+          Log.d(LOG_TAG, "startOnBackgroundTrue");
+          forceMainActivityReload(true);
+        } else {
+          Log.d(LOG_TAG, "don't want main activity");
         }
     }
 
@@ -78,6 +86,8 @@ public class PushHandlerActivity extends Activity implements PushConstants {
         if (extras != null) {
             Bundle originalExtras = extras.getBundle(PUSH_BUNDLE);
 
+            if (originalExtras == null) { return true; }
+
             originalExtras.putBoolean(FOREGROUND, false);
             originalExtras.putBoolean(COLDSTART, !isPushPluginActive);
             originalExtras.putBoolean(DISMISSED, extras.getBoolean(DISMISSED));
@@ -85,10 +95,14 @@ public class PushHandlerActivity extends Activity implements PushConstants {
             originalExtras.remove(NO_CACHE);
 
             remoteInput = RemoteInput.getResultsFromIntent(intent);
+
             if (remoteInput != null) {
-                String inputString = remoteInput.getCharSequence(INLINE_REPLY).toString();
-                Log.d(LOG_TAG, "response: " + inputString);
-                originalExtras.putString(INLINE_REPLY, inputString);
+                CharSequence charSequence = remoteInput.getCharSequence(INLINE_REPLY);
+                if (charSequence != null) {
+                  String inputString = charSequence.toString();
+                  Log.d(LOG_TAG, "response: " + inputString);
+                  originalExtras.putString(INLINE_REPLY, inputString);
+                }
             }
 
             PushPlugin.sendExtras(originalExtras);
@@ -106,6 +120,9 @@ public class PushHandlerActivity extends Activity implements PushConstants {
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             Bundle originalExtras = extras.getBundle(PUSH_BUNDLE);
+
+            if (launchIntent == null) { return; }
+
             if (originalExtras != null) {
                 launchIntent.putExtras(originalExtras);
             }
@@ -121,6 +138,9 @@ public class PushHandlerActivity extends Activity implements PushConstants {
     protected void onResume() {
         super.onResume();
         final NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.cancelAll();
+
+        if (notificationManager != null) {
+          notificationManager.cancelAll();
+        }
     }
 }

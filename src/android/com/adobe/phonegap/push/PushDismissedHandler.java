@@ -14,7 +14,7 @@ public class PushDismissedHandler extends BroadcastReceiver implements PushConst
         String action = intent.getAction();
         int notID = intent.getIntExtra(NOT_ID, 0);
 
-        if (action.equals(PUSH_DISMISSED)) {
+        if (action != null && action.equals(PUSH_DISMISSED)) {
             String LOG_TAG = "Push_DismissedHandler";
 
             Log.d(LOG_TAG, "PushDismissedHandler = " + extras);

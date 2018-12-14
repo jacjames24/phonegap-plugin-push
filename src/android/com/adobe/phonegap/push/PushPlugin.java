@@ -64,12 +64,15 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
           .getSystemService(Context.NOTIFICATION_SERVICE);
-      List<NotificationChannel> notificationChannels = notificationManager.getNotificationChannels();
-      for (NotificationChannel notificationChannel : notificationChannels) {
-        JSONObject channel = new JSONObject();
-        channel.put(CHANNEL_ID, notificationChannel.getId());
-        channel.put(CHANNEL_DESCRIPTION, notificationChannel.getDescription());
-        channels.put(channel);
+
+      if (notificationManager != null) {
+        List<NotificationChannel> notificationChannels = notificationManager.getNotificationChannels();
+        for (NotificationChannel notificationChannel : notificationChannels) {
+          JSONObject channel = new JSONObject();
+          channel.put(CHANNEL_ID, notificationChannel.getId());
+          channel.put(CHANNEL_DESCRIPTION, notificationChannel.getDescription());
+          channels.put(channel);
+        }
       }
     }
     return channels;
@@ -81,7 +84,10 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
           .getSystemService(Context.NOTIFICATION_SERVICE);
-      notificationManager.deleteNotificationChannel(channelId);
+
+      if (notificationManager != null) {
+        notificationManager.deleteNotificationChannel(channelId);
+      }
     }
   }
 
@@ -136,7 +142,9 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
         mChannel.enableVibration(vibrate);
       }
 
-      notificationManager.createNotificationChannel(mChannel);
+      if (notificationManager != null) {
+        notificationManager.createNotificationChannel(mChannel);
+      }
     }
   }
 
@@ -147,6 +155,9 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
           .getSystemService(Context.NOTIFICATION_SERVICE);
+
+      if (notificationManager == null) { return; }
+
       List<NotificationChannel> channels = notificationManager.getNotificationChannels();
 
       for (int i = 0; i < channels.size(); i++) {
@@ -278,22 +289,18 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
           SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(COM_ADOBE_PHONEGAP_PUSH,
               Context.MODE_PRIVATE);
           JSONArray topics = data.optJSONArray(0);
-          if (topics != null && !"".equals(registration_id)) {
-            unsubscribeFromTopics(topics, registration_id);
-          } else {
-            FirebaseInstanceId.getInstance().deleteInstanceId();
-            Log.v(LOG_TAG, "UNREGISTER");
+          FirebaseInstanceId.getInstance().deleteInstanceId();
+          Log.v(LOG_TAG, "UNREGISTER");
 
-            // Remove shared prefs
-            SharedPreferences.Editor editor = sharedPref.edit();
-            editor.remove(SOUND);
-            editor.remove(VIBRATE);
-            editor.remove(CLEAR_BADGE);
-            editor.remove(CLEAR_NOTIFICATIONS);
-            editor.remove(FORCE_SHOW);
-            editor.remove(SENDER_ID);
-            editor.apply();
-          }
+          // Remove shared prefs
+          SharedPreferences.Editor editor = sharedPref.edit();
+          editor.remove(SOUND);
+          editor.remove(VIBRATE);
+          editor.remove(CLEAR_BADGE);
+          editor.remove(CLEAR_NOTIFICATIONS);
+          editor.remove(FORCE_SHOW);
+          editor.remove(SENDER_ID);
+          editor.apply();
 
           callbackContext.success();
         } catch (IOException e) {
@@ -494,7 +501,10 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
   private void clearAllNotifications() {
     final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
         .getSystemService(Context.NOTIFICATION_SERVICE);
-    notificationManager.cancelAll();
+
+    if (notificationManager != null) {
+      notificationManager.cancelAll();
+    }
   }
 
   private void clearNotification(int id) {
@@ -502,12 +512,15 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
         .getSystemService(Context.NOTIFICATION_SERVICE);
     String appName = (String) this.cordova.getActivity().getPackageManager()
         .getApplicationLabel(this.cordova.getActivity().getApplicationInfo());
-    notificationManager.cancel(appName, id);
+
+    if (notificationManager != null) {
+      notificationManager.cancel(appName, id);
+    }
   }
 
   private void subscribeToTopics(JSONArray topics, String registrationToken) {
     if (topics != null) {
-      String topic = null;
+      String topic;
       for (int i = 0; i < topics.length(); i++) {
         topic = topics.optString(i, null);
         subscribeToTopic(topic);
@@ -524,7 +537,7 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
 
   private void unsubscribeFromTopics(JSONArray topics, String registrationToken) {
     if (topics != null) {
-      String topic = null;
+      String topic;
       for (int i = 0; i < topics.length(); i++) {
         topic = topics.optString(i, null);
         unsubscribeFromTopic(topic, registrationToken);
